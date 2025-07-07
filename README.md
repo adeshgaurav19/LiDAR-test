@@ -35,7 +35,7 @@ I began by researching the fundamentals of catenary equations and the common str
 
 Realizing that a simple clustering approach was insufficient, I began looking for more specialized techniques. I reviewed approximately 10 academic research papers on the topic of powerline extraction from LiDAR data.
 
-The key breakthrough came from the paper **"A Hierarchical Clustering Method to Repair Gaps in Point Clouds of Powerline Corridor for Powerline Extraction"** ([Link to Paper Placeholder]). This inspired the "Segment-and-Trace" method (`strategy_for_easy`), which involved slicing the data and connecting wire segments. This new approach worked perfectly for the `Easy` dataset but still struggled with the more complex files.
+The key breakthrough came from the paper **"A Hierarchical Clustering Method to Repair Gaps in Point Clouds of Powerline Corridor for Powerline Extraction"** (https://www.mdpi.com/2072-4292/13/8/1502). This inspired the "Segment-and-Trace" method (`strategy_for_easy`), which involved slicing the data and connecting wire segments. This new approach worked perfectly for the `Easy` dataset but still struggled with the more complex files.
 
 ### 3. The Final Pipeline: A Tailored, Multi-Strategy Solution
 
