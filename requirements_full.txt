@@ -27,3 +27,4 @@ threadpoolctl==3.5.0 # Used by scikit-learn for managing thread pools
 requests==2.32.3 # For making HTTP requests (general web interaction)
 Pillow==10.4.0 # Common image processing library (often a dependency)
 gunicorn
+pytest 7.4.4
