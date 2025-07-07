@@ -1,5 +1,3 @@
-# src/preprocessing.py
-
 """
 This module provides functions for both preprocessing and Exploratory Data Analysis (EDA)
 of LiDAR point cloud data.
@@ -136,6 +134,10 @@ def generate_eda_plots(df: pd.DataFrame, dataset_name: str, output_dir: str) -> 
         except Exception as e:
             print(f"  ❌ Failed to generate {name}: {e}")
     return figures
+
+# ==============================================================================
+# POINT CLOUD ALIGNMENT FUNCTIONS
+# ==============================================================================
 
 def align_point_cloud(df: pd.DataFrame):
     """

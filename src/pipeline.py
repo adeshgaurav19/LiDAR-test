@@ -1,5 +1,3 @@
-# src/pipeline.py
-
 """
 Main end-to-end pipeline for the LiDAR Wire Detection and Modeling project.
 
@@ -9,6 +7,9 @@ This script orchestrates the entire workflow:
 3.  Applies tailored preprocessing (alignment) and clustering strategies for each dataset.
 4.  Fits true catenary models to the identified wire clusters.
 5.  Visualizes the final models and saves all plots and results to disk.
+
+Author: Adesh
+Date: 2025-07-07
 """
 import os
 import sys
