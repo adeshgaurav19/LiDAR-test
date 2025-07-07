@@ -7,7 +7,7 @@ pyarrow==18.0.0 # Essential for efficient Parquet file handling
 # Essential Data Science Libraries (General Purpose)
 scikit-learn==1.6.0 # For core ML algorithms (clustering, preprocessing, etc.)
 seaborn==0.13.2 # For enhanced statistical data visualization
-matplotlib==3.10.0 # Foundational plotting library
+matplotlib
 
 # Specialized Clustering
 hdbscan==0.8.40 # For advanced density-based clustering
