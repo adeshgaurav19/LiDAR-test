@@ -1,84 +1,94 @@
 """
 This module provides functions for loading LiDAR point cloud data from .parquet files.
-It ensures that the loaded data contains the expected 'x', 'y', and 'z' columns,
-which are essential for subsequent processing in the catenary modeling pipeline.
+It includes a master function to load all datasets required for the project at once.
+
+Author: Adesh
+Date: 2025-07-07
 """
 import pandas as pd
 import os
+import sys
 
 def load_lidar_data(file_path: str) -> pd.DataFrame:
     """
-    Loads LiDAR point cloud data from a .parquet file. 
-
-    This function performs checks to ensure the file exists and is a valid
-    parquet file, and that it contains the necessary 'x', 'y', and 'z'
-    coordinates as specified for the LiDAR datasets. 
+    Loads a single LiDAR .parquet file into a DataFrame, ensuring it contains
+    the required 'x', 'y', and 'z' columns.
 
     Args:
-        file_path (str): The full path to the .parquet file. 
+        file_path (str): The full path to the .parquet file.
 
     Returns:
-        pd.DataFrame: A DataFrame containing the LiDAR points with 'x', 'y', and 'z' columns.
-
+        pd.DataFrame: A DataFrame containing the LiDAR point cloud data.
+        
     Raises:
-        FileNotFoundError: If the specified file_path does not exist.
-        IOError: If there's an error reading the parquet file.
-        ValueError: If the loaded DataFrame does not contain 'x', 'y', and 'z' columns.
+        FileNotFoundError: If the file does not exist at the specified path.
+        ValueError: If the loaded DataFrame is missing required columns.
     """
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"The file '{file_path}' was not found.")
+        raise FileNotFoundError(f"File not found: {file_path}")
 
-    try:
-        df = pd.read_parquet(file_path)
-    except Exception as e:
-        raise IOError(f"Error loading parquet file '{file_path}': {e}")
+    df = pd.read_parquet(file_path)
 
-    # The document states the files have 'x', 'y', and 'z' columns.
     required_columns = ['x', 'y', 'z']
     if not all(col in df.columns for col in required_columns):
-        missing_cols = [col for col in required_columns if col not in df.columns]
-        raise ValueError(f"DataFrame from '{file_path}' is missing required columns: {missing_cols}. Expected 'x', 'y', 'z'.")
+        missing = [col for col in required_columns if col not in df.columns]
+        raise ValueError(f"Input DataFrame from '{file_path}' is missing required columns: {missing}")
 
-    return df[required_columns] # Ensure only the required columns are returned
+    return df[required_columns]
 
-if __name__ == "__main__":
-    # This block allows you to test the data_loader independently and serves as example usage.
+def load_all_lidar_datasets() -> dict:
+    """
+    Loads all four LiDAR datasets (easy, medium, hard, extrahard) from the
+    'data' directory into a dictionary of DataFrames.
 
-    # Assume your .parquet files are in a 'data' directory one level up from 'src/catenary_model'
-    # Adjust this path based on where you put your 'data' folder relative to where you run this script
-    current_dir = os.path.dirname(__file__)
+    This function is designed to be called from other modules in the pipeline.
+
+    Returns:
+        dict: A dictionary where keys are the difficulty levels ('easy', 'medium', etc.)
+              and values are the corresponding pandas DataFrames.
+    """
+    print("--- Loading All LiDAR Datasets ---")
+    
+    # This path logic works in both .py scripts and Jupyter notebooks
+    try:
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+    except NameError:
+        current_dir = os.getcwd()
+        
     project_root = os.path.abspath(os.path.join(current_dir, '..'))
     data_dir = os.path.join(project_root, 'data')
+    
+    if not os.path.isdir(data_dir):
+        print(f"❌ Critical Error: Data directory not found at the expected path: {data_dir}")
+        return {}
 
-    print("--- Testing Data Loader ---")
-
-    # Example usage for each dataset:
-    file_names = {
-        "easy": "lidar_cable_points_easy.parquet",
-        "medium": "lidar_cable_points_medium.parquet",
-        "hard": "lidar_cable_points_hard.parquet",
-        "extrahard": "lidar_cable_points_extrahard.parquet"
-    }
-
-    loaded_dataframes = {}
-
-    for name, filename in file_names.items():
-        file_path = os.path.join(data_dir, filename)
+    datasets = {}
+    for difficulty in ['easy', 'medium', 'hard', 'extrahard']:
         try:
-            print(f"\nAttempting to load {filename}...")
-            df = load_lidar_data(file_path)
-            loaded_dataframes[name] = df
-            print(f"Successfully loaded {name.upper()} data. Shape: {df.shape}")
-            print(f"First 5 rows of {name.upper()} data:\n{df.head()}")
-        except (FileNotFoundError, ValueError, IOError) as e:
-            print(f"Error loading {name.upper()} data from '{file_path}': {e}")
-            print("Please ensure the .parquet files are in the 'data/' directory.")
+            file_path = os.path.join(data_dir, f"lidar_cable_points_{difficulty}.parquet")
+            datasets[difficulty] = load_lidar_data(file_path)
+            print(f"  ✅ Loaded '{difficulty}' dataset ({len(datasets[difficulty]):,} points).")
         except Exception as e:
-            print(f"An unexpected error occurred while loading {name.upper()} data: {e}")
+            print(f"  ❌ Could not load '{difficulty}' dataset: {e}")
+            datasets[difficulty] = pd.DataFrame()
+    
+    return datasets
 
-    print("\n--- Data Loading Test Complete ---")
-
-    if loaded_dataframes:
-        print("\nSummary of loaded data:")
-        for name, df in loaded_dataframes.items():
-            print(f"- {name.upper()}: {df.shape[0]} points")
+# if __name__ == "__main__":
+#     # This block is commented out as requested.
+#     # It serves as an example of how to use the functions in this module.
+# 
+#     print("--- Testing data_loader.py ---")
+#     
+#     # Example of loading all datasets
+#     all_data = load_all_lidar_datasets()
+#     
+#     if all_data:
+#         print("\n--- Summary of Loaded Data ---")
+#         for name, df in all_data.items():
+#             if not df.empty:
+#                 print(f"  - {name.upper()}: {df.shape[0]} points, Columns: {df.columns.tolist()}")
+#             else:
+#                 print(f"  - {name.upper()}: Failed to load.")
+#     else:
+#         print("No data was loaded.")

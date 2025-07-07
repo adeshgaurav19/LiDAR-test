@@ -1,146 +1,180 @@
+# src/preprocessing.py
+
 """
-This module provides functions for basic preprocessing of LiDAR point cloud data.
-Currently, it supports merging multiple LiDAR datasets into a single DataFrame
-and assigning a unique identifier to points from each original file.
+This module provides functions for both preprocessing and Exploratory Data Analysis (EDA)
+of LiDAR point cloud data.
+
+Author: Adesh
+Date: 2025-07-07
 """
 
 import pandas as pd
+import numpy as np
 import os
-from data_loader import load_lidar_data # Assuming data_loader.py is in the same 'src' directory
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from data_loader import load_lidar_data
+from sklearn.decomposition import PCA
+
+# ==============================================================================
+# PREPROCESSING FUNCTIONS
+# ==============================================================================
 
 def merge_lidar_files(file_paths: dict) -> pd.DataFrame:
-    """
-    Merges multiple LiDAR point cloud DataFrames into a single DataFrame,
-    adding an 'original_file' column to identify the source of each point.
-
-    Args:
-        file_paths (dict): A dictionary where keys are descriptive names (e.g., 'easy', 'medium')
-                           and values are the full paths to the .parquet files.
-
-    Returns:
-        pd.DataFrame: A concatenated DataFrame with 'x', 'y', 'z', and 'original_file' columns.
-                      'original_file' will contain the key from the input dictionary.
-
-    Raises:
-        ValueError: If file_paths dictionary is empty or no files can be loaded.
-    """
+    """Merges multiple LiDAR DataFrames, adding an 'original_file' column."""
     if not file_paths:
         raise ValueError("The 'file_paths' dictionary cannot be empty.")
-
     all_dfs = []
     print("\n--- Merging LiDAR Files ---")
     for name, path in file_paths.items():
         try:
             df = load_lidar_data(path)
             if not df.empty:
-                df['original_file'] = name # Add the identifier column
+                df['original_file'] = name
                 all_dfs.append(df)
-                print(f"  Loaded and added '{name}' data ({len(df):,} points).")
-            else:
-                print(f"  Skipping '{name}': Loaded DataFrame was empty.")
+                print(f"  ✅ Loaded and added '{name}' data ({len(df):,} points).")
         except Exception as e:
-            print(f"  Error loading '{name}' from '{path}': {e}. Skipping this file.")
-
+            print(f"  ❌ Error loading '{name}': {e}.")
     if not all_dfs:
-        raise ValueError("No LiDAR data could be loaded and merged from the provided file paths.")
-
-    merged_df = pd.concat(all_dfs, ignore_index=True)
-    print(f"\nSuccessfully merged all loaded data. Total points: {len(merged_df):,}")
-    print(f"Columns in merged DataFrame: {merged_df.columns.tolist()}")
-    return merged_df
+        raise ValueError("No LiDAR data could be loaded.")
+    return pd.concat(all_dfs, ignore_index=True)
 
 def save_processed_data(df: pd.DataFrame, output_path: str):
-    """
-    Saves a DataFrame to a .parquet file.
-
-    Args:
-        df (pd.DataFrame): The DataFrame to save.
-        output_path (str): The full path where the .parquet file will be saved.
-    """
+    """Saves a DataFrame to a .parquet file."""
     try:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         df.to_parquet(output_path, index=False)
-        print(f"Processed data successfully saved to '{output_path}'.")
+        print(f"✅ Processed data successfully saved to '{output_path}'.")
     except Exception as e:
-        print(f"Error saving processed data to '{output_path}': {e}")
-        raise IOError(f"Failed to save DataFrame to {output_path}")
+        raise IOError(f"Error saving processed data to '{output_path}': {e}")
 
-def read_processed_data(file_path: str) -> pd.DataFrame:
+# ==============================================================================
+# EDA PLOTTING FUNCTIONS
+# ==============================================================================
+
+def plot_3d_scatter(df: pd.DataFrame, title: str) -> plt.Figure:
+    """Generates a 3D scatter plot of the point cloud."""
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(df['x'], df['y'], df['z'], s=1, c='royalblue', alpha=0.5)
+    ax.set_title(f"3D Point Cloud: {title}", fontsize=16)
+    return fig
+
+def plot_2d_projections(df: pd.DataFrame, title: str) -> plt.Figure:
     """
-    Reads processed LiDAR data from a .parquet file, expecting 'x', 'y', 'z', and 'original_file' columns.
-
-    Args:
-        file_path (str): The full path to the processed .parquet file.
-
-    Returns:
-        pd.DataFrame: The DataFrame containing the processed LiDAR points.
-
-    Raises:
-        FileNotFoundError: If the specified file_path does not exist.
-        ValueError: If the loaded DataFrame does not contain expected columns.
+    Generates 2D projections of the point cloud (XY, XZ, YZ).
+    This corrected version manually sets up each plot for robustness and clarity.
     """
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"The file '{file_path}' was not found.")
+    fig, axes = plt.subplots(1, 3, figsize=(24, 7))
+    fig.suptitle(f'2D Projections: {title}', fontsize=16)
 
-    try:
-        df = pd.read_parquet(file_path)
-    except Exception as e:
-        raise IOError(f"Error loading parquet file '{file_path}': {e}")
+    # XY Projection (Top-down view)
+    axes[0].scatter(df['x'], df['y'], s=1, alpha=0.5, color='salmon')
+    axes[0].set_title('XY Projection (Top-down)', fontsize=13)
+    axes[0].set_xlabel('X Coordinate')
+    axes[0].set_ylabel('Y Coordinate')
+    axes[0].set_aspect('equal', adjustable='box') # Keep it true to scale
+    axes[0].grid(True, linestyle='--', alpha=0.6)
 
-    required_columns = ['x', 'y', 'z', 'original_file']
-    if not all(col in df.columns for col in required_columns):
-        missing_cols = [col for col in required_columns if col not in df.columns]
-        raise ValueError(f"Processed DataFrame from '{file_path}' is missing required columns: {missing_cols}. Expected 'x', 'y', 'z', 'original_file'.")
+    # XZ Projection (Front view)
+    axes[1].scatter(df['x'], df['z'], s=1, alpha=0.5, color='mediumseagreen')
+    axes[1].set_title('XZ Projection (Front/Catenary View)', fontsize=13)
+    axes[1].set_xlabel('X Coordinate')
+    axes[1].set_ylabel('Z Coordinate')
+    axes[1].set_aspect('auto', adjustable='box') # Auto aspect is better for visualizing sag
+    axes[1].grid(True, linestyle='--', alpha=0.6)
 
-    return df
+    # YZ Projection (Side view)
+    axes[2].scatter(df['y'], df['z'], s=1, alpha=0.5, color='mediumpurple')
+    axes[2].set_title('YZ Projection (Side View)', fontsize=13)
+    axes[2].set_xlabel('Y Coordinate')
+    axes[2].set_ylabel('Z Coordinate')
+    axes[2].set_aspect('auto', adjustable='box')
+    axes[2].grid(True, linestyle='--', alpha=0.6)
 
-if __name__ == "__main__":
-    # This block allows you to test the preprocessing module independently
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout
+    return fig
+    
+def plot_distributions(df: pd.DataFrame, title: str) -> plt.Figure:
+    """Generates histograms for coordinate distributions."""
+    fig, axes = plt.subplots(1, 3, figsize=(20, 5))
+    fig.suptitle(f"Coordinate Distributions: {title}", fontsize=16)
+    for i, coord in enumerate(['x', 'y', 'z']):
+        axes[i].hist(df[coord], bins=80, color='skyblue', edgecolor='black', alpha=0.7)
+        axes[i].set_title(f"{coord.upper()} Distribution")
+    return fig
 
-    current_dir = os.path.dirname(__file__)
-    project_root = os.path.abspath(os.path.join(current_dir, '..'))
-    data_dir = os.path.join(project_root, 'data')
-    processed_data_dir = os.path.join(project_root, 'data', 'processed') # Create a subdir for processed data
+def plot_boxplots(df: pd.DataFrame, title: str) -> plt.Figure:
+    """Generates box plots for coordinates."""
+    fig, axes = plt.subplots(1, 3, figsize=(20, 6))
+    fig.suptitle(f"Coordinate Box Plots: {title}", fontsize=16)
+    for i, coord in enumerate(['x', 'y', 'z']):
+        axes[i].boxplot(df[coord], vert=True, patch_artist=True, boxprops=dict(facecolor='lightblue'))
+        axes[i].set_title(f"{coord.upper()} Coordinate")
+    return fig
 
-    # Ensure the processed data directory exists
-    os.makedirs(processed_data_dir, exist_ok=True)
-
-    print("--- Testing Preprocessing Module: Merging & Saving ---")
-
-    file_paths_to_merge = {
-        "easy": os.path.join(data_dir, "lidar_cable_points_easy.parquet"),
-        "medium": os.path.join(data_dir, "lidar_cable_points_medium.parquet"),
-        "hard": os.path.join(data_dir, "lidar_cable_points_hard.parquet"),
-        "extrahard": os.path.join(data_dir, "lidar_cable_points_extrahard.parquet")
+def generate_eda_plots(df: pd.DataFrame, dataset_name: str, output_dir: str) -> dict:
+    """Generates, saves, and returns all EDA plots for a dataset."""
+    if df.empty: return {}
+    os.makedirs(output_dir, exist_ok=True)
+    plot_functions = {
+        '3d_scatter': plot_3d_scatter,
+        '2d_projections': plot_2d_projections,
+        'distributions': plot_distributions,
+        'boxplots': plot_boxplots,
     }
+    figures = {}
+    print(f"\n--- Generating EDA plots for '{dataset_name}' dataset ---")
+    for name, func in plot_functions.items():
+        try:
+            fig = func(df, dataset_name.upper())
+            save_path = os.path.join(output_dir, f"{dataset_name}_{name}.png")
+            fig.savefig(save_path, bbox_inches='tight')
+            print(f"  ✅ Saved {name} to '{save_path}'")
+            plt.close(fig)
+            figures[name] = fig
+        except Exception as e:
+            print(f"  ❌ Failed to generate {name}: {e}")
+    return figures
 
-    output_merged_file = os.path.join(processed_data_dir, "all_lidar_data_merged.parquet")
+def align_point_cloud(df: pd.DataFrame):
+    """
+    Rotates the point cloud to align with the X-axis and returns the
+    aligned data along with the rotation matrix for reverse transformation.
+    """
+    print("  - Aligning point cloud...")
+    points_2d = df[['x', 'y']].values
+    
+    # Use PCA to find the main direction
+    pca = PCA(n_components=2).fit(points_2d)
+    direction_vector = pca.components_[0]
+    angle = np.arctan2(direction_vector[1], direction_vector[0])
+    
+    # Create the rotation matrix
+    rotation_matrix = np.array([[np.cos(-angle), -np.sin(-angle)],
+                                [np.sin(-angle),  np.cos(-angle)]])
+    
+    # Apply the rotation
+    rotated_points_2d = points_2d.dot(rotation_matrix.T)
+    
+    df_aligned = pd.DataFrame(rotated_points_2d, columns=['x', 'y'])
+    df_aligned['z'] = df['z'].values
+    
+    print(f"  - Cloud rotated by {-np.degrees(angle):.2f} degrees.")
+    return df_aligned, rotation_matrix
 
-    try:
-        # 1. Merge the files
-        merged_df = merge_lidar_files(file_paths_to_merge)
-        print(f"\nMerged DataFrame head:\n{merged_df.head()}")
-        print(f"Value counts for 'original_file':\n{merged_df['original_file'].value_counts()}")
-
-        # 2. Save the merged file
-        save_processed_data(merged_df, output_merged_file)
-
-        # 3. Read the saved file back to verify
-        print(f"\n--- Verifying Re-read of Processed Data ---")
-        re_read_df = read_processed_data(output_merged_file)
-        print(f"Successfully re-read data. Shape: {re_read_df.shape}")
-        print(f"Re-read DataFrame head:\n{re_read_df.head()}")
-        print(f"Re-read Value counts for 'original_file':\n{re_read_df['original_file'].value_counts()}")
+def reverse_alignment(clusters: list, rotation_matrix: np.ndarray):
+    """
+    Applies the inverse rotation to transform clusters back to original coordinates.
+    """
+    realigned_clusters = []
+    
+    for cluster in clusters:
+        # Apply inverse rotation to XY coordinates
+        original_xy = cluster[:, :2].dot(rotation_matrix)
         
-        # Verify the content
-        if merged_df.equals(re_read_df):
-            print("\nVerification successful: Original merged DataFrame matches re-read DataFrame.")
-        else:
-            print("\nWarning: Original merged DataFrame DOES NOT match re-read DataFrame.")
-
-
-    except (ValueError, FileNotFoundError, IOError) as e:
-        print(f"Error during preprocessing test: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred during preprocessing test: {e}")
-
-    print("\n--- Preprocessing Module Test Complete ---")
+        # Combine with original Z coordinates
+        realigned_cluster = np.hstack([original_xy, cluster[:, 2].reshape(-1, 1)])
+        realigned_clusters.append(realigned_cluster)
+        
+    return realigned_clusters
