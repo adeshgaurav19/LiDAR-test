@@ -1,0 +1,13 @@
+# Jupyter Notebooks
+notebook_clustering.ipynb
+
+
+# Pickle files (binary data files)
+*.pkl
+
+# Specific document files
+catenary_fitting_results.pkl
+LiDAR Wire Clustering Approach.docs
+tests/test_catenary_fitting.py
+tests/test_data_loader.py
+tests/test_preprocessing.py
