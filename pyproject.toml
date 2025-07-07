@@ -1,0 +1,28 @@
+# pyproject.toml
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.flake8]
+max-line-length = 88
+# Ignore E203, a whitespace error that conflicts with black
+extend-ignore = "E203"
+
+[tool.pydocstyle]
+# Ignore docstring rules that conflict with black
+add-ignore = "D203, D212"
+
+[tool.pylint.main]
+max-line-length = 88
+disable = [
+    "C0114", # Missing module docstring
+    "C0115", # Missing class docstring
+    "C0116", # Missing function docstring
+    "R0903", # Too few public methods
+    "R0913", # Too many arguments
+]

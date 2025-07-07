@@ -5,9 +5,12 @@ It includes a master function to load all datasets required for the project at o
 Author: Adesh
 Date: 2025-07-07
 """
-import pandas as pd
+
 import os
 import sys
+
+import pandas as pd
+
 
 def load_lidar_data(file_path: str) -> pd.DataFrame:
     """
@@ -19,7 +22,7 @@ def load_lidar_data(file_path: str) -> pd.DataFrame:
 
     Returns:
         pd.DataFrame: A DataFrame containing the LiDAR point cloud data.
-        
+
     Raises:
         FileNotFoundError: If the file does not exist at the specified path.
         ValueError: If the loaded DataFrame is missing required columns.
@@ -29,12 +32,15 @@ def load_lidar_data(file_path: str) -> pd.DataFrame:
 
     df = pd.read_parquet(file_path)
 
-    required_columns = ['x', 'y', 'z']
+    required_columns = ["x", "y", "z"]
     if not all(col in df.columns for col in required_columns):
         missing = [col for col in required_columns if col not in df.columns]
-        raise ValueError(f"Input DataFrame from '{file_path}' is missing required columns: {missing}")
+        raise ValueError(
+            f"Input DataFrame from '{file_path}' is missing required columns: {missing}"
+        )
 
     return df[required_columns]
+
 
 def load_all_lidar_datasets() -> dict:
     """
@@ -48,41 +54,48 @@ def load_all_lidar_datasets() -> dict:
               and values are the corresponding pandas DataFrames.
     """
     print("--- Loading All LiDAR Datasets ---")
-    
+
     # This path logic works in both .py scripts and Jupyter notebooks
     try:
         current_dir = os.path.dirname(os.path.realpath(__file__))
     except NameError:
         current_dir = os.getcwd()
-        
-    project_root = os.path.abspath(os.path.join(current_dir, '..'))
-    data_dir = os.path.join(project_root, 'data')
-    
+
+    project_root = os.path.abspath(os.path.join(current_dir, ".."))
+    data_dir = os.path.join(project_root, "data")
+
     if not os.path.isdir(data_dir):
-        print(f"❌ Critical Error: Data directory not found at the expected path: {data_dir}")
+        print(
+            f"❌ Critical Error: Data directory not found at the expected path: {data_dir}"
+        )
         return {}
 
     datasets = {}
-    for difficulty in ['easy', 'medium', 'hard', 'extrahard']:
+    for difficulty in ["easy", "medium", "hard", "extrahard"]:
         try:
-            file_path = os.path.join(data_dir, f"lidar_cable_points_{difficulty}.parquet")
+            file_path = os.path.join(
+                data_dir, f"lidar_cable_points_{difficulty}.parquet"
+            )
             datasets[difficulty] = load_lidar_data(file_path)
-            print(f"  ✅ Loaded '{difficulty}' dataset ({len(datasets[difficulty]):,} points).")
+            print(
+                f"  ✅ Loaded '{difficulty}' dataset ({len(datasets[difficulty]):,} points)."
+            )
         except Exception as e:
             print(f"  ❌ Could not load '{difficulty}' dataset: {e}")
             datasets[difficulty] = pd.DataFrame()
-    
+
     return datasets
+
 
 # if __name__ == "__main__":
 #     # This block is commented out as requested.
 #     # It serves as an example of how to use the functions in this module.
-# 
+#
 #     print("--- Testing data_loader.py ---")
-#     
+#
 #     # Example of loading all datasets
 #     all_data = load_all_lidar_datasets()
-#     
+#
 #     if all_data:
 #         print("\n--- Summary of Loaded Data ---")
 #         for name, df in all_data.items():

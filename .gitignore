@@ -9,7 +9,7 @@ __pycache__/
 .ipynb_checkpoints/
 *.ipynb-checkpoint # Temporary files created by Jupyter
 # If you have notebooks that are *only* for temporary work and you don't want them tracked:
-# notebooks/*.ipynb 
+notebooks/*.ipynb 
 
 # Editor-specific files (VS Code)
 .vscode/
@@ -27,4 +27,5 @@ build/
 *.egg-info/
 
 LiDAR Wire Clustering Approach.docx
+notebooks/catenary_summary.csv
 

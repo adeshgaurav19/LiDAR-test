@@ -2,6 +2,8 @@
 
 A Python package for identifying individual powerline wires from drone-based LiDAR point cloud data and generating 3D catenary models. This project was developed as a technical assessment for a data science internship.
 
+HF Link - https://huggingface.co/spaces/adzee19/LiDAR
+
 ## 🎯 Project Overview
 
 This project provides an end-to-end pipeline that processes raw LiDAR point cloud datasets to automatically detect and cluster individual powerline wires. For each identified wire, the pipeline then fits a robust 3D catenary model. The final solution is a sophisticated, **multi-strategy system** that adapts its approach based on the specific challenges of each dataset, including noise, large gaps, varying point densities, and close wire proximity.

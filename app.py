@@ -29,21 +29,24 @@ Date: 2025-07-07
 
 import os
 import sys
-import pandas as pd
-import numpy as np
+
 import dash
-from dash import dcc, html, dash_table
-from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
-import plotly.graph_objects as go
 import matplotlib
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+from dash import dash_table, dcc, html
+from dash.dependencies import Input, Output
+
 # Use Agg backend to avoid macOS threading issues with Matplotlib's GUI.
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from io import BytesIO
+matplotlib.use("Agg")
 import base64
-import tempfile
 import glob
+import tempfile
+from io import BytesIO
+
+import matplotlib.pyplot as plt
 
 # --- Set up the project path to access our custom modules ---
 try:
@@ -54,22 +57,23 @@ except NameError:
     current_dir = os.getcwd()
 
 # Add 'src' directory to Python's path so we can import our modules
-src_path = os.path.join(current_dir, 'src')
+src_path = os.path.join(current_dir, "src")
 if src_path not in sys.path:
     sys.path.append(src_path)
 
-# --- Import our custom functions ---
-# These are from our project modules in the src/ directory
-from data_loader import load_lidar_data
-from preprocessing import align_point_cloud, reverse_alignment, generate_eda_plots
+from catenary_fitting import fit_catenary_to_wire_clusters, project_catenary_to_3d
 from clustering import (
+    run_all_strategies,
     strategy_for_easy,
     strategy_for_medium_extrahard,
     strategy_hough_transform,
     visualize_results,
-    run_all_strategies,
 )
-from catenary_fitting import fit_catenary_to_wire_clusters, project_catenary_to_3d
+
+# --- Import our custom functions ---
+# These are from our project modules in the src/ directory
+from data_loader import load_lidar_data
+from preprocessing import align_point_cloud, generate_eda_plots, reverse_alignment
 
 # ==============================================================================
 # DASH APP SETUP
@@ -77,6 +81,7 @@ from catenary_fitting import fit_catenary_to_wire_clusters, project_catenary_to_
 # Initialize the Dash app with Bootstrap for a polished look
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server  # For deployment, if needed
+
 
 # --- Helper function to convert saved PNG files to base64 ---
 def image_file_to_base64(file_path):
@@ -92,6 +97,7 @@ def image_file_to_base64(file_path):
         print(f"Warning: Couldn't read image {file_path}: {e}")
         return None
 
+
 # --- Define the app layout ---
 app.layout = dbc.Container(
     [
@@ -100,11 +106,10 @@ app.layout = dbc.Container(
             dbc.Col(
                 html.H1(
                     "LiDAR Powerline Analysis Dashboard",
-                    className="text-center text-primary mt-4 mb-4"
+                    className="text-center text-primary mt-4 mb-4",
                 )
             )
         ),
-        
         # Dataset selection dropdown in a nice card
         dbc.Row(
             dbc.Col(
@@ -119,19 +124,21 @@ app.layout = dbc.Container(
                                         {"label": "Easy Dataset", "value": "easy"},
                                         {"label": "Medium Dataset", "value": "medium"},
                                         {"label": "Hard Dataset", "value": "hard"},
-                                        {"label": "Extra Hard Dataset", "value": "extrahard"},
+                                        {
+                                            "label": "Extra Hard Dataset",
+                                            "value": "extrahard",
+                                        },
                                     ],
                                     value="easy",  # Default to 'easy' dataset
-                                    className="mb-3"
+                                    className="mb-3",
                                 ),
                             ]
                         )
                     ],
-                    className="shadow-sm mb-4"  # Subtle shadow for visual appeal
+                    className="shadow-sm mb-4",  # Subtle shadow for visual appeal
                 )
             )
         ),
-        
         # Tabs to switch between EDA, clustering, and final models
         dbc.Row(
             dbc.Col(
@@ -143,27 +150,23 @@ app.layout = dbc.Container(
                     ],
                     id="tabs",
                     active_tab="eda",  # Start with EDA tab
-                    className="mb-4"
+                    className="mb-4",
                 )
             )
         ),
-        
         # Container for tab content
-        dbc.Row(
-            dbc.Col(
-                html.Div(id="tab-content", className="mt-4")
-            )
-        ),
+        dbc.Row(dbc.Col(html.Div(id="tab-content", className="mt-4"))),
     ],
-    fluid=True  # Make the layout responsive
+    fluid=True, 
 )
+
 
 # ==============================================================================
 # CALLBACK LOGIC
 # ==============================================================================
 @app.callback(
     Output("tab-content", "children"),
-    [Input("tabs", "active_tab"), Input("dataset-dropdown", "value")]
+    [Input("tabs", "active_tab"), Input("dataset-dropdown", "value")],
 )
 def render_tab_content(active_tab, selected_difficulty):
     """
@@ -175,13 +178,15 @@ def render_tab_content(active_tab, selected_difficulty):
         return dbc.Alert(
             "Please select a dataset to analyze.",
             color="warning",
-            className="text-center"
+            className="text-center",
         )
 
     # --- Load the LiDAR data ---
     try:
         data_dir = os.path.join(current_dir, "data")
-        file_path = os.path.join(data_dir, f"lidar_cable_points_{selected_difficulty}.parquet")
+        file_path = os.path.join(
+            data_dir, f"lidar_cable_points_{selected_difficulty}.parquet"
+        )
         df = load_lidar_data(file_path)
     except Exception as e:
         return dbc.Alert(f"Error loading data: {str(e)}", color="danger")
@@ -193,26 +198,28 @@ def render_tab_content(active_tab, selected_difficulty):
             with tempfile.TemporaryDirectory() as temp_dir:
                 print(f"Generating EDA plots for '{selected_difficulty}' dataset...")
                 generate_eda_plots(df, selected_difficulty, temp_dir)
-                
+
                 # Grab all PNG files from the temp directory
                 eda_image_files = glob.glob(os.path.join(temp_dir, "*.png"))
                 if not eda_image_files:
                     return dbc.Alert(
                         f"No EDA plots generated for the '{selected_difficulty}' dataset.",
-                        color="warning"
+                        color="warning",
                     )
 
                 # Convert images to base64 for display
                 eda_images = [
-                    img for img in 
-                    [image_file_to_base64(img_path) for img_path in eda_image_files]
+                    img
+                    for img in [
+                        image_file_to_base64(img_path) for img_path in eda_image_files
+                    ]
                     if img is not None
                 ]
 
                 if not eda_images:
                     return dbc.Alert(
                         "Failed to load EDA plots from temporary directory.",
-                        color="warning"
+                        color="warning",
                     )
 
             # Layout for EDA plots
@@ -220,19 +227,20 @@ def render_tab_content(active_tab, selected_difficulty):
                 [
                     html.H4(
                         f"EDA for {selected_difficulty.upper()} Dataset",
-                        className="mb-4"
+                        className="mb-4",
                     ),
                     dbc.Row(
                         [
                             dbc.Col(
                                 html.Img(
                                     src=img,
-                                    style={"width": "100%", "margin-bottom": "20px"}
+                                    style={"width": "100%", "margin-bottom": "20px"},
                                 ),
-                                md=6
-                            ) for img in eda_images
+                                md=6,
+                            )
+                            for img in eda_images
                         ],
-                        justify="center"
+                        justify="center",
                     ),
                 ]
             )
@@ -268,7 +276,7 @@ def render_tab_content(active_tab, selected_difficulty):
             if not wire_clusters:
                 return dbc.Alert(
                     f"Clustering failed for the '{selected_difficulty}' dataset.",
-                    color="warning"
+                    color="warning",
                 )
 
             # Create a 3D scatter plot for clusters
@@ -280,11 +288,19 @@ def render_tab_content(active_tab, selected_difficulty):
                     z=df["z"],
                     mode="markers",
                     marker=dict(size=1.5, color="lightgray", opacity=0.3),
-                    name="Original Cloud"
+                    name="Original Cloud",
                 )
             )
             # Color palette for wires
-            colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2"]
+            colors = [
+                "#1f77b4",
+                "#ff7f0e",
+                "#2ca02c",
+                "#d62728",
+                "#9467bd",
+                "#8c564b",
+                "#e377c2",
+            ]
             for i, wire_cloud in enumerate(wire_clusters):
                 color = colors[i % len(colors)]
                 fig_clustering.add_trace(
@@ -294,7 +310,7 @@ def render_tab_content(active_tab, selected_difficulty):
                         z=wire_cloud[:, 2],
                         mode="markers",
                         marker=dict(size=2, color=color),
-                        name=f"Wire {i+1} Points"
+                        name=f"Wire {i+1} Points",
                     )
                 )
             fig_clustering.update_layout(
@@ -302,24 +318,23 @@ def render_tab_content(active_tab, selected_difficulty):
                 margin=dict(l=0, r=0, b=0, t=40),
                 legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
                 scene=dict(
-                    xaxis_title="X",
-                    yaxis_title="Y",
-                    zaxis_title="Z",
-                    aspectmode="data"
-                )
+                    xaxis_title="X", yaxis_title="Y", zaxis_title="Z", aspectmode="data"
+                ),
             )
 
             return html.Div(
                 [
                     html.H4(
                         f"Clustering Results for {selected_difficulty.upper()} Dataset",
-                        className="mb-4"
+                        className="mb-4",
                     ),
-                    dcc.Graph(figure=fig_clustering, style={"height": "80vh"})
+                    dcc.Graph(figure=fig_clustering, style={"height": "80vh"}),
                 ]
             )
         except Exception as e:
-            return dbc.Alert(f"Error generating clustering plots: {str(e)}", color="danger")
+            return dbc.Alert(
+                f"Error generating clustering plots: {str(e)}", color="danger"
+            )
 
     # --- Final Models Tab: Show fitted catenary models ---
     elif active_tab == "final":
@@ -347,15 +362,17 @@ def render_tab_content(active_tab, selected_difficulty):
             if not wire_clusters:
                 return dbc.Alert(
                     f"Clustering failed for the '{selected_difficulty}' dataset.",
-                    color="warning"
+                    color="warning",
                 )
 
             # Fit catenary models to the clusters
-            catenary_results = fit_catenary_to_wire_clusters(wire_clusters, selected_difficulty.upper())
+            catenary_results = fit_catenary_to_wire_clusters(
+                wire_clusters, selected_difficulty.upper()
+            )
             if not catenary_results["wire_params"]:
                 return dbc.Alert(
                     f"Catenary fitting failed for the '{selected_difficulty}' dataset.",
-                    color="warning"
+                    color="warning",
                 )
 
             # Build results table
@@ -363,13 +380,15 @@ def render_tab_content(active_tab, selected_difficulty):
             for i, (params, quality) in enumerate(
                 zip(catenary_results["wire_params"], catenary_results["fit_qualities"])
             ):
-                results_list.append({
-                    "Wire ID": i + 1,
-                    "Points": len(wire_clusters[i]),
-                    'Catenary "a"': f"{params[0]:.2f}",
-                    "Trough (x0, y0)": f"({params[1]:.2f}, {params[2]:.2f})",
-                    "R-Squared": f"{quality:.3f}"
-                })
+                results_list.append(
+                    {
+                        "Wire ID": i + 1,
+                        "Points": len(wire_clusters[i]),
+                        'Catenary "a"': f"{params[0]:.2f}",
+                        "Trough (x0, y0)": f"({params[1]:.2f}, {params[2]:.2f})",
+                        "R-Squared": f"{quality:.3f}",
+                    }
+                )
             results_df = pd.DataFrame(results_list)
 
             # Create 3D visualization with original points, clusters, and catenary curves
@@ -381,10 +400,18 @@ def render_tab_content(active_tab, selected_difficulty):
                     z=df["z"],
                     mode="markers",
                     marker=dict(size=1.5, color="lightgray", opacity=0.3),
-                    name="Original Cloud"
+                    name="Original Cloud",
                 )
             )
-            colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2"]
+            colors = [
+                "#1f77b4",
+                "#ff7f0e",
+                "#2ca02c",
+                "#d62728",
+                "#9467bd",
+                "#8c564b",
+                "#e377c2",
+            ]
             for i, wire_cloud in enumerate(wire_clusters):
                 color = colors[i % len(colors)]
                 fig_3d.add_trace(
@@ -394,7 +421,7 @@ def render_tab_content(active_tab, selected_difficulty):
                         z=wire_cloud[:, 2],
                         mode="markers",
                         marker=dict(size=2, color=color),
-                        name=f"Wire {i+1} Points"
+                        name=f"Wire {i+1} Points",
                     )
                 )
                 if i < len(catenary_results["wire_curves_3d"]):
@@ -406,7 +433,7 @@ def render_tab_content(active_tab, selected_difficulty):
                             z=curve_3d[:, 2],
                             mode="lines",
                             line=dict(width=7, color=color),
-                            name=f"Wire {i+1} Model"
+                            name=f"Wire {i+1} Model",
                         )
                     )
             fig_3d.update_layout(
@@ -414,11 +441,8 @@ def render_tab_content(active_tab, selected_difficulty):
                 margin=dict(l=0, r=0, b=0, t=40),
                 legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
                 scene=dict(
-                    xaxis_title="X",
-                    yaxis_title="Y",
-                    zaxis_title="Z",
-                    aspectmode="data"
-                )
+                    xaxis_title="X", yaxis_title="Y", zaxis_title="Z", aspectmode="data"
+                ),
             )
 
             # Layout with plot on left and table on right
@@ -427,8 +451,7 @@ def render_tab_content(active_tab, selected_difficulty):
                     dbc.Row(
                         [
                             dbc.Col(
-                                dcc.Graph(figure=fig_3d, style={"height": "80vh"}),
-                                md=8
+                                dcc.Graph(figure=fig_3d, style={"height": "80vh"}), md=8
                             ),
                             dbc.Col(
                                 [
@@ -436,24 +459,29 @@ def render_tab_content(active_tab, selected_difficulty):
                                     dash_table.DataTable(
                                         data=results_df.to_dict("records"),
                                         columns=[
-                                            {"name": c, "id": c} for c in results_df.columns
+                                            {"name": c, "id": c}
+                                            for c in results_df.columns
                                         ],
                                         style_table={"overflowX": "auto"},
-                                        style_cell={"textAlign": "left", "padding": "5px"},
+                                        style_cell={
+                                            "textAlign": "left",
+                                            "padding": "5px",
+                                        },
                                         style_header={
                                             "backgroundColor": "rgb(230, 230, 230)",
-                                            "fontWeight": "bold"
-                                        }
-                                    )
+                                            "fontWeight": "bold",
+                                        },
+                                    ),
                                 ],
-                                md=4
-                            )
+                                md=4,
+                            ),
                         ]
                     )
                 ]
             )
         except Exception as e:
             return dbc.Alert(f"Error generating final models: {str(e)}", color="danger")
+
 
 # ==============================================================================
 # RUN THE APP
