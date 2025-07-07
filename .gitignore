@@ -11,3 +11,6 @@ LiDAR Wire Clustering Approach.docs
 tests/test_catenary_fitting.py
 tests/test_data_loader.py
 tests/test_preprocessing.py
+
+# Python cache directories
+__pycache__/
