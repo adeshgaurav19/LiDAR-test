@@ -15,7 +15,7 @@ hdbscan==0.8.40 # For advanced density-based clustering
 # Web Application Framework (for optional Dash frontend)
 dash==3.0.4
 dash-bootstrap-components==2.0.3
-plotly==5.29.3 # Often used with Dash for interactive plots
+plotly
 
 # Jupyter Notebook dependencies (if running tests or development in Jupyter)
 ipykernel==6.29.3
