@@ -138,7 +138,7 @@ To run all tests, navigate to the project root and run:
 ```bash
 python -m unittest discover tests/
 ```
-- The codebase is automatically formatted using `black` and `isort` and linted with `flake8`, `pydocstyle`, and `pylint` to ensure high code quality and consistency.
+## - The codebase is automatically formatted using `black` and `isort` and linted with `flake8`, `pydocstyle`, and `pylint` to ensure high code quality and consistency.
 
 ## 🖥️ Interactive Dashboard
 
